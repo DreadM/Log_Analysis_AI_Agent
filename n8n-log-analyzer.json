@@ -1,0 +1,145 @@
+{
+  "name": "Log Analysis with MITRE ATT&CK Mapping",
+  "nodes": [
+    {
+      "id": "trigger",
+      "type": "n8n-nodes-base.webhookTrigger",
+      "position": [200, 300],
+      "parameters": {
+        "path": "receive-logs",
+        "responseMode": "lastNode",
+        "options": {
+          "rawBody": true
+        }
+      }
+    },
+    {
+      "id": "fileParser",
+      "type": "n8n-nodes-base.function",
+      "position": [400, 300],
+      "parameters": {
+        "functionCode": "// Get the incoming file content\nconst fileContent = $input.item.json.body;\n\n// Parse the log file based on format (example assumes text logs)\nconst logLines = fileContent.split('\\n').filter(line => line.trim() !== '');\n\n// Return for further processing\nreturn {\n  json: {\n    rawLogs: logLines,\n    totalLogCount: logLines.length,\n    timestamp: new Date().toISOString()\n  }\n};"
+      }
+    },
+    {
+      "id": "logPreprocessor",
+      "type": "n8n-nodes-base.function",
+      "position": [600, 300],
+      "parameters": {
+        "functionCode": "// Get the log lines\nconst logLines = $input.item.json.rawLogs;\n\n// Example preprocessing to categorize log levels and extract timestamps\nconst processedLogs = logLines.map(line => {\n  const logEntry = {\n    raw: line,\n    timestamp: null,\n    level: null,\n    component: null,\n    message: line,\n    isError: false,\n    isWarning: false\n  };\n  \n  // Extract timestamp (adjust regex based on your log format)\n  const timestampMatch = line.match(/\\[(\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{3})?)\\]/);\n  if (timestampMatch) {\n    logEntry.timestamp = timestampMatch[1];\n    logEntry.message = logEntry.message.replace(timestampMatch[0], '').trim();\n  }\n  \n  // Extract log level\n  const levelMatch = line.match(/\\b(ERROR|WARNING|INFO|DEBUG|CRITICAL|FATAL|WARN)\\b/i);\n  if (levelMatch) {\n    logEntry.level = levelMatch[1].toUpperCase();\n    logEntry.isError = ['ERROR', 'CRITICAL', 'FATAL'].includes(logEntry.level);\n    logEntry.isWarning = ['WARNING', 'WARN'].includes(logEntry.level);\n  }\n  \n  // Extract component (adjust based on your log format)\n  const componentMatch = line.match(/\\[([A-Za-z0-9._-]+)\\]/);\n  if (componentMatch) {\n    logEntry.component = componentMatch[1];\n  }\n  \n  return logEntry;\n});\n\n// Group logs by component and level for summary\nconst logStats = {\n  byLevel: {},\n  byComponent: {},\n  errorCount: processedLogs.filter(log => log.isError).length,\n  warningCount: processedLogs.filter(log => log.isWarning).length\n};\n\n// Calculate statistics\nprocessedLogs.forEach(log => {\n  // Count by level\n  if (log.level) {\n    logStats.byLevel[log.level] = (logStats.byLevel[log.level] || 0) + 1;\n  }\n  \n  // Count by component\n  if (log.component) {\n    logStats.byComponent[log.component] = (logStats.byComponent[log.component] || 0) + 1;\n  }\n});\n\nreturn {\n  json: {\n    processedLogs,\n    logStats,\n    timestamp: $input.item.json.timestamp\n  }\n};"
+      }
+    },
+    {
+      "id": "abnormalDetector",
+      "type": "n8n-nodes-base.function",
+      "position": [800, 300],
+      "parameters": {
+        "functionCode": "// Get processed logs and stats\nconst processedLogs = $input.item.json.processedLogs;\nconst logStats = $input.item.json.logStats;\n\n// Define patterns for abnormal logs - customize these based on your environment\nconst abnormalPatterns = [\n  // Authentication failures\n  { pattern: /failed login|authentication failed|invalid credentials/i, category: 'Authentication Failure', mitreTactic: 'TA0006', mitreTechnique: 'T1110' },\n  \n  // Privilege escalation\n  { pattern: /privilege escalation|sudo|elevation of privilege/i, category: 'Privilege Escalation', mitreTactic: 'TA0004', mitreTechnique: 'T1548' },\n  \n  // File modifications in sensitive areas\n  { pattern: /modified file|file changed|file deleted/i, category: 'Suspicious File Activity', mitreTactic: 'TA0005', mitreTechnique: 'T1565' },\n  \n  // Unusual process execution\n  { pattern: /process spawned|new process|unexpected process/i, category: 'Suspicious Process Activity', mitreTactic: 'TA0002', mitreTechnique: 'T1059' },\n  \n  // Network connections\n  { pattern: /outbound connection|unusual port|unexpected connection/i, category: 'Suspicious Network Activity', mitreTactic: 'TA0011', mitreTechnique: 'T1571' },\n  \n  // Firewall alerts\n  { pattern: /firewall block|traffic denied|packet dropped/i, category: 'Firewall Alert', mitreTactic: 'TA0011', mitreTechnique: 'T1046' },\n  \n  // Generic errors that could indicate issues\n  { pattern: /exception|crash|fatal error|timeout/i, category: 'System Error', mitreTactic: null, mitreTechnique: null }\n];\n\n// Detect abnormal logs\nconst abnormalLogs = [];\nconst mitreFindings = {};\n\nprocessedLogs.forEach(log => {\n  // Check each pattern against the log\n  for (const pattern of abnormalPatterns) {\n    if (pattern.pattern.test(log.raw)) {\n      const finding = {\n        ...log,\n        category: pattern.category,\n        mitreTactic: pattern.mitreTactic,\n        mitreTechnique: pattern.mitreTechnique\n      };\n      \n      abnormalLogs.push(finding);\n      \n      // Group by MITRE technique if available\n      if (pattern.mitreTechnique) {\n        if (!mitreFindings[pattern.mitreTechnique]) {\n          mitreFindings[pattern.mitreTechnique] = {\n            technique: pattern.mitreTechnique,\n            tactic: pattern.mitreTactic,\n            category: pattern.category,\n            count: 0,\n            examples: []\n          };\n        }\n        \n        mitreFindings[pattern.mitreTechnique].count++;\n        \n        // Store up to 3 examples for each technique\n        if (mitreFindings[pattern.mitreTechnique].examples.length < 3) {\n          mitreFindings[pattern.mitreTechnique].examples.push(log.raw);\n        }\n      }\n      \n      // We found a match, no need to check other patterns\n      break;\n    }\n  }\n});\n\nreturn {\n  json: {\n    processedLogs: $input.item.json.processedLogs,\n    logStats: $input.item.json.logStats,\n    abnormalLogs,\n    mitreFindings: Object.values(mitreFindings),\n    abnormalCount: abnormalLogs.length,\n    timestamp: $input.item.json.timestamp\n  }\n};"
+      }
+    },
+    {
+      "id": "aiAnalyzer",
+      "type": "n8n-nodes-base.openAi",
+      "position": [1000, 300],
+      "parameters": {
+        "authentication": "apiKey",
+        "operation": "completion",
+        "model": "gpt-4",
+        "prompt": "=You are a cybersecurity expert analyzing log files. Based on the provided log analysis, create a concise but comprehensive security report.\n\n# Raw Data\n- Total Logs Analyzed: {{$node[\"logPreprocessor\"].json[\"processedLogs\"].length}}\n- Error Count: {{$node[\"logPreprocessor\"].json[\"logStats\"].errorCount}}\n- Warning Count: {{$node[\"logPreprocessor\"].json[\"logStats\"].warningCount}}\n\n# Abnormal Activities Detected\n{{$node[\"abnormalDetector\"].json[\"abnormalCount\"]}} potentially suspicious activities were detected.\n\n# MITRE ATT&CK Framework Mapping\n{{#each $node[\"abnormalDetector\"].json[\"mitreFindings\"]}}\n## {{this.technique}} ({{this.tactic}}) - {{this.category}}\nCount: {{this.count}}\nExamples:\n{{#each this.examples}}\n- {{this}}\n{{/each}}\n\n{{/each}}\n\nBased on this information, please provide:\n1. An executive summary of the findings\n2. Key security concerns identified in the logs\n3. Recommendations for further investigation or remediation steps\n4. Overall risk assessment (Low, Medium, High, Critical)",
+        "options": {
+          "maxTokens": 1024,
+          "temperature": 0.1
+        }
+      }
+    },
+    {
+      "id": "formatReport",
+      "type": "n8n-nodes-base.function",
+      "position": [1200, 300],
+      "parameters": {
+        "functionCode": "// Get the AI analysis\nconst aiAnalysis = $input.item.json.text || $input.item.json.data?.text || '';\n\n// Get the original log stats\nconst logStats = $input.item.json.logStats || {};\nconst abnormalLogs = $input.item.json.abnormalLogs || [];\nconst mitreFindings = $input.item.json.mitreFindings || [];\n\n// Create a formatted HTML report\nconst htmlReport = `\n<!DOCTYPE html>\n<html>\n<head>\n  <title>Security Log Analysis Report</title>\n  <style>\n    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; color: #333; }\n    .container { max-width: 1200px; margin: 0 auto; }\n    .header { background-color: #2c3e50; color: white; padding: 20px; margin-bottom: 20px; }\n    .section { margin-bottom: 30px; background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }\n    h1 { margin-top: 0; }\n    h2 { margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; }\n    .stat-box { display: inline-block; background: #f8f9fa; padding: 15px; margin: 10px 10px 10px 0; border-radius: 5px; min-width: 150px; text-align: center; }\n    .stat-box.error { background: #fee; }\n    .stat-box.warning { background: #ffd; }\n    .stat-box.abnormal { background: #eef; }\n    .technique { background: #e8f4f8; padding: 15px; margin-bottom: 15px; border-radius: 5px; }\n    .technique-header { font-weight: bold; margin-bottom: 10px; }\n    .example { font-family: monospace; background: #f5f5f5; padding: 8px; margin: 5px 0; border-radius: 3px; font-size: 0.9em; overflow-x: auto; }\n    .ai-analysis { background: #f9f9f9; padding: 20px; border-left: 4px solid #2c3e50; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <div class=\"header\">\n      <h1>Security Log Analysis Report</h1>\n      <p>Generated on ${new Date().toLocaleString()}</p>\n    </div>\n    \n    <div class=\"section\">\n      <h2>Summary Statistics</h2>\n      <div class=\"stat-box\">Total Logs<br><strong>${$input.item.json.processedLogs?.length || 0}</strong></div>\n      <div class=\"stat-box error\">Errors<br><strong>${logStats.errorCount || 0}</strong></div>\n      <div class=\"stat-box warning\">Warnings<br><strong>${logStats.warningCount || 0}</strong></div>\n      <div class=\"stat-box abnormal\">Abnormal Events<br><strong>${abnormalLogs.length}</strong></div>\n    </div>\n    \n    <div class=\"section\">\n      <h2>AI Analysis</h2>\n      <div class=\"ai-analysis\">${aiAnalysis.replace(/\\n/g, '<br>')}</div>\n    </div>\n    \n    ${mitreFindings.length > 0 ? `\n    <div class=\"section\">\n      <h2>MITRE ATT&CK Framework Mapping</h2>\n      ${mitreFindings.map(finding => `\n        <div class=\"technique\">\n          <div class=\"technique-header\">${finding.technique} (${finding.tactic}) - ${finding.category}</div>\n          <div>Count: ${finding.count}</div>\n          <div>Examples:</div>\n          ${finding.examples.map(example => `<div class=\"example\">${example}</div>`).join('')}\n        </div>\n      `).join('')}\n    </div>` : ''}\n    \n    ${abnormalLogs.length > 0 ? `\n    <div class=\"section\">\n      <h2>Detected Abnormal Logs (${abnormalLogs.length})</h2>\n      <table style=\"width: 100%; border-collapse: collapse;\">\n        <thead>\n          <tr style=\"background: #f5f5f5;\">\n            <th style=\"text-align: left; padding: 8px; border: 1px solid #ddd;\">Timestamp</th>\n            <th style=\"text-align: left; padding: 8px; border: 1px solid #ddd;\">Category</th>\n            <th style=\"text-align: left; padding: 8px; border: 1px solid #ddd;\">Message</th>\n          </tr>\n        </thead>\n        <tbody>\n          ${abnormalLogs.slice(0, 20).map(log => `\n            <tr>\n              <td style=\"padding: 8px; border: 1px solid #ddd;\">${log.timestamp || 'N/A'}</td>\n              <td style=\"padding: 8px; border: 1px solid #ddd;\">${log.category}</td>\n              <td style=\"padding: 8px; border: 1px solid #ddd;\">${log.raw}</td>\n            </tr>\n          `).join('')}\n          ${abnormalLogs.length > 20 ? `<tr><td colspan=\"3\" style=\"text-align: center; padding: 8px;\">...and ${abnormalLogs.length - 20} more</td></tr>` : ''}\n        </tbody>\n      </table>\n    </div>` : ''}\n  </div>\n</body>\n</html>\n`;\n\nreturn {\n  json: {\n    reportHtml: htmlReport,\n    reportText: aiAnalysis,\n    summary: {\n      totalLogs: $input.item.json.processedLogs?.length || 0,\n      abnormalEvents: abnormalLogs.length,\n      mitreFindings: mitreFindings.length,\n      errorCount: logStats.errorCount || 0,\n      warningCount: logStats.warningCount || 0\n    }\n  }\n};"
+      }
+    },
+    {
+      "id": "respondWithReport",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "position": [1400, 300],
+      "parameters": {
+        "options": {
+          "responseCode": 200,
+          "responseData": "responseBody"
+        },
+        "responseBody": "={{ \n  \"result\": \"success\",\n  \"report\": {\n    \"summary\": $node[\"formatReport\"].json[\"summary\"],\n    \"html\": $node[\"formatReport\"].json[\"reportHtml\"],\n    \"text\": $node[\"formatReport\"].json[\"reportText\"]\n  }\n}}",
+        "options.responseFormat": "json"
+      }
+    }
+  ],
+  "connections": {
+    "trigger": {
+      "main": [
+        [
+          {
+            "node": "fileParser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "fileParser": {
+      "main": [
+        [
+          {
+            "node": "logPreprocessor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "logPreprocessor": {
+      "main": [
+        [
+          {
+            "node": "abnormalDetector",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "abnormalDetector": {
+      "main": [
+        [
+          {
+            "node": "aiAnalyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "aiAnalyzer": {
+      "main": [
+        [
+          {
+            "node": "formatReport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "formatReport": {
+      "main": [
+        [
+          {
+            "node": "respondWithReport",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

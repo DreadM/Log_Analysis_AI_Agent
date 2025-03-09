@@ -1,0 +1,37 @@
+[2025-03-09T08:15:23.456] [INFO] [SYSTEM] System startup completed successfully
+[2025-03-09T08:16:12.789] [INFO] [AUTH] User jsmith logged in successfully from 192.168.1.105
+[2025-03-09T08:21:34.123] [INFO] [FILE] User jsmith accessed file /home/shared/projects/2025-roadmap.docx
+[2025-03-09T08:30:45.678] [INFO] [NETWORK] Established connection to internal database server at 10.0.0.15:3306
+[2025-03-09T08:45:11.222] [WARNING] [AUTH] Failed login attempt for user admin from 203.0.113.42
+[2025-03-09T08:45:23.333] [WARNING] [AUTH] Failed login attempt for user admin from 203.0.113.42
+[2025-03-09T08:45:39.444] [WARNING] [AUTH] Failed login attempt for user admin from 203.0.113.42
+[2025-03-09T08:45:52.555] [WARNING] [AUTH] Failed login attempt for user root from 203.0.113.42
+[2025-03-09T08:46:05.666] [WARNING] [AUTH] Failed login attempt for user postgres from 203.0.113.42
+[2025-03-09T08:53:19.777] [ERROR] [FIREWALL] Blocked outbound connection attempt to 185.143.223.12:443 from internal host 192.168.1.24
+[2025-03-09T09:12:34.888] [INFO] [AUTH] User mwilson logged in successfully from 192.168.1.110
+[2025-03-09T09:23:45.999] [INFO] [DATABASE] Scheduled database backup completed successfully
+[2025-03-09T09:45:00.111] [INFO] [FILE] User mwilson accessed file /home/shared/finance/q1_report.xlsx
+[2025-03-09T10:05:12.222] [WARNING] [PROCESS] Unexpected process spawned: cmd.exe /c powershell -enc JQBjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0ACAAUwB5AHMAdABlAG0ALgBOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0A
+[2025-03-09T10:05:15.333] [WARNING] [FILE] Critical system file modified: C:\Windows\System32\drivers\etc\hosts
+[2025-03-09T10:06:03.444] [ERROR] [ANTIVIRUS] Detected potential malware: Trojan.Downloader at C:\Users\mwilson\Downloads\invoice-03092025.pdf.exe
+[2025-03-09T10:10:45.555] [ERROR] [NETWORK] Unusual outbound data transfer: 192.168.1.24 sent 245MB to external host 91.243.62.201
+[2025-03-09T10:15:22.666] [INFO] [AUTH] User admin logged in successfully from 192.168.1.1
+[2025-03-09T10:20:11.777] [WARNING] [PRIVILEGES] User mwilson attempted to execute sudo command without authorization
+[2025-03-09T10:20:37.888] [CRITICAL] [PRIVILEGES] Elevation of privilege detected: user mwilson granted admin rights through unexpected channel
+[2025-03-09T10:21:04.999] [WARNING] [DATABASE] Unusual database query: SELECT * FROM users WHERE username LIKE '%' OR '1'='1'
+[2025-03-09T10:22:15.111] [ERROR] [DATABASE] Database exception: syntax error in query at line 1: DROP TABLE users;--
+[2025-03-09T10:30:00.222] [INFO] [NETWORK] Established connection to external API at api.example.com:443
+[2025-03-09T10:32:45.333] [WARNING] [NETWORK] Port scan detected from 203.0.113.100, targeting ports 20-25,80,443
+[2025-03-09T10:45:12.444] [INFO] [FILE] User admin accessed file /etc/shadow
+[2025-03-09T10:47:33.555] [ERROR] [FILE] File encryption detected on network share: Multiple files renamed to *.encrypted
+[2025-03-09T10:50:19.666] [CRITICAL] [SYSTEM] Multiple services stopped unexpectedly: httpd, mysqld, smbd
+[2025-03-09T10:51:02.777] [WARNING] [FILE] New scheduled task created by user mwilson: "SystemUpdater" running every 30 minutes
+[2025-03-09T10:53:45.888] [ERROR] [NETWORK] Firewall rule modified: Rule #5 (Block all outbound SMB traffic) disabled
+[2025-03-09T11:00:33.999] [INFO] [AUTH] User jsmith logged in successfully from 192.168.1.105
+[2025-03-09T11:12:22.111] [WARNING] [SYSTEM] Registry key modified: HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Run
+[2025-03-09T11:15:10.222] [ERROR] [NETWORK] Detected data exfiltration attempt: DNS tunneling to unrecognized domain superlegit-notmalware.com
+[2025-03-09T11:20:45.333] [CRITICAL] [SECURITY] Security monitoring service stopped unexpectedly
+[2025-03-09T11:30:11.444] [INFO] [SYSTEM] Emergency security protocol initiated by admin
+[2025-03-09T11:32:00.555] [INFO] [NETWORK] Network segment 192.168.1.0/24 isolated from external networks
+[2025-03-09T11:35:23.666] [INFO] [SECURITY] Full system scan initiated on host 192.168.1.24
+[2025-03-09T12:15:45.777] [INFO] [SECURITY] Incident response team notified of potential breach: Ticket #IR-2025-03-09-01 created

@@ -1,0 +1,45 @@
+# Node.js / n8n
+node_modules/
+.n8n/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# API Keys and sensitive information
+*_API_Key*
+*.key
+*.pem
+.env
+
+# Generated files
+*_analysis.html
+*.log
+!sample_security.log
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
