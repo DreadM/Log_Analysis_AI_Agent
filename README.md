@@ -1,6 +1,6 @@
 # Log Analysis AI Agent with MITRE ATT&CK Framework Integration
 
-A powerful security log analysis tool that uses n8n workflows and OpenAI to automatically detect suspicious activities in log files and map them to the MITRE ATT&CK framework.
+A simple security log analysis tool that uses n8n workflows and OpenAI to automatically detect suspicious activities in log files and map them to the MITRE ATT&CK framework.
 
 ## Features
 
@@ -46,7 +46,24 @@ git clone https://github.com/yourusername/log-analysis-ai-agent.git
 cd log-analysis-ai-agent
 ```
 
-### 3. Set up the n8n workflow
+### 3. Workflow 
+
+<img width="1188" alt="Screenshot 2025-03-09 at 9 12 44 AM" src="https://github.com/user-attachments/assets/4cf9537e-4dbf-4264-8f98-c2573428144b" />
+
+## Workflow Architecture
+
+The log analysis workflow consists of several n8n nodes:
+
+1. **Webhook**: Receives the log file via HTTP POST
+2. **File Parser**: Extracts log entries and formats them for processing
+3. **Log Processor**: Analyzes log entries to identify patterns and extract metadata
+4. **Abnormal Detector**: Identifies suspicious activities and maps them to MITRE ATT&CK
+5. **OpenAI**: Generates a human-readable security analysis
+6. **Report Generator**: Creates comprehensive HTML and JSON reports
+7. **Respond to Webhook**: Returns the analysis results
+
+
+### 4. Set up the n8n workflow
 
 ```bash
 # Start n8n
@@ -56,14 +73,14 @@ n8n start
 # Open http://localhost:5678 in your browser and import n8n-log-analyzer.json
 ```
 
-### 4. Configure OpenAI API Key
+### 5. Configure OpenAI API Key
 
 1. In the n8n interface, open the imported workflow
 2. Click on the OpenAI node
 3. Configure the OpenAI API integration with your API key
 4. Save the workflow
 
-### 5. Install Python dependencies
+### 6. Install Python dependencies
 
 ```bash
 pip install requests
@@ -97,17 +114,6 @@ The tool provides:
 2. **HTML Report**: Detailed report with findings, statistics, and AI analysis
 3. **JSON Response**: Full analysis data in JSON format
 
-## Workflow Architecture
-
-The log analysis workflow consists of several n8n nodes:
-
-1. **Webhook**: Receives the log file via HTTP POST
-2. **File Parser**: Extracts log entries and formats them for processing
-3. **Log Processor**: Analyzes log entries to identify patterns and extract metadata
-4. **Abnormal Detector**: Identifies suspicious activities and maps them to MITRE ATT&CK
-5. **OpenAI**: Generates a human-readable security analysis
-6. **Report Generator**: Creates comprehensive HTML and JSON reports
-7. **Respond to Webhook**: Returns the analysis results
 
 ## Customization
 
